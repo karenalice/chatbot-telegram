@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+
+generate.py
+generate_final.py
