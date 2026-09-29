@@ -1,0 +1,371 @@
+{
+  "name": "Chatbot Telegram - Temperatura Completo",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": "={{ [\"message\"] }}",
+        "additionalFields": {}
+      },
+      "id": "1d26ff10-8843-4176-855d-05149fb8f804",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -4656,
+        224
+      ],
+      "webhookId": "chatbot-telegram-webhook"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "queue",
+              "value": "={{ $json.message.text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim() }}"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "20bc8f6b-d729-44e7-8ff1-9bf6f03d4113",
+      "name": "Format Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -4432,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "/start"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "oi"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "ola"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "bom dia"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "boa tarde"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "boa noite"
+            },
+            {
+              "value1": "={{ $json.queue }}",
+              "value2": "sim"
+            },
+            {
+              "value1": "nao",
+              "value2": "={{ $json.queue }}"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "id": "6edb74ad-4ef9-4150-9857-7f264d5bfb19",
+      "name": "Verifica Start",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4208,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Format Input').item.json.chat_id }}",
+        "text": "Digite o nome da cidade",
+        "additionalFields": {}
+      },
+      "id": "dad271c5-5da3-44f3-998c-bd1e1fbebc3a",
+      "name": "Envia Pergunta Cidade",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -3984,
+        128
+      ],
+      "webhookId": "a1b2c3d4-0000-4000-8000-000000000099"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.queue.endsWith(',br') ? $json.queue : $json.queue + ',BR' }}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "lang",
+              "value": "pt_br"
+            },
+            {
+              "name": "appid",
+              "value": "={{ $env.OPENWEATHER_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "6f97b4c2-f50f-43aa-9e1e-fa33025ba920",
+      "name": "OpenWeather API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -3984,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.cod }}",
+              "operation": "equal",
+              "value2": 200
+            }
+          ],
+          "string": [
+            {
+              "value1": "={{ $json.name }}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ String($json.main?.temp ?? '') }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "ad049d50-51da-4949-bb63-597e0577e461",
+      "name": "Verifica Sucesso",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -3760,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "mensagem_sucesso",
+              "value": "=⛅ A temperatura em {{ $json.name }} é de {{ Math.round($json.main.temp) }}°C."
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $('Format Input').item.json.chat_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "80a54396-98f5-47ab-9220-60b5ab8a6d89",
+      "name": "Prepara Mensagem",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -3536,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Format Input').item.json.chat_id }}",
+        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).",
+        "additionalFields": {}
+      },
+      "id": "0ff695e5-4b54-420b-b5d4-eaab18a8842b",
+      "name": "Envia Erro Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -3536,
+        416
+      ],
+      "webhookId": "50e02581-64ba-4477-8e1e-5e21167524e4"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Format Input').item.json.chat_id }}",
+        "text": "={{ $json.mensagem_sucesso }}",
+        "additionalFields": {}
+      },
+      "id": "ab27adfc-16d3-4102-9209-ad9a4e5821b9",
+      "name": "Envia Sucesso Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -3312,
+        224
+      ],
+      "webhookId": "fb03ddd8-d9ae-402e-9e11-86891c9f42a8"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Format Input').item.json.chat_id }}",
+        "text": "Deseja saber a temperatura de outra cidade?",
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboard": {
+          "rows": []
+        },
+        "replyKeyboardOptions": {},
+        "additionalFields": {}
+      },
+      "id": "f62af989-94b5-4f8b-aab0-633508f35320",
+      "name": "Pergunta Outra Cidade",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -3088,
+        224
+      ],
+      "webhookId": "a1b2c3d4-0000-4000-8000-000000000098"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Input": {
+      "main": [
+        [
+          {
+            "node": "Verifica Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Start": {
+      "main": [
+        [
+          {
+            "node": "Envia Pergunta Cidade",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenWeather API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenWeather API": {
+      "main": [
+        [
+          {
+            "node": "Verifica Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Prepara Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envia Erro Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Envia Sucesso Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envia Sucesso Telegram": {
+      "main": [
+        [
+          {
+            "node": "Pergunta Outra Cidade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8bfbb438-d941-4180-9567-06722e2a121a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4df3ed252fd86d94616d692f149b1794c32aeca4e5279f306c5a9c940285a33a"
+  },
+  "nodeGroups": [],
+  "id": "8jSgMbSO3qtkFZEW",
+  "tags": []
+}
